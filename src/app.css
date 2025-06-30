@@ -1,0 +1,10 @@
+@import 'tailwindcss';
+
+body {
+background-color:rgb(46, 45, 45);
+text-align: center;
+color: black;
+font-size: 40px;
+font-family: monospace;
+margin: 30px;
+ }
