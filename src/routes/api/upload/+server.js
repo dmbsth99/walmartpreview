@@ -2,7 +2,9 @@
 import { json } from '@sveltejs/kit';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { v4 as uuidv4 } from 'uuid';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const { v4: uuidv4 } = require('uuid');
 
 // ADJUST THESE IMPORT PATHS TO BE EXACTLY CORRECT FOR YOUR PROJECT
 // Example using relative paths (you should know if you're using $lib or relative)
