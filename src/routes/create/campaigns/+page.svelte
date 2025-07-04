@@ -14,6 +14,7 @@
     FORMS?: string;
     NOTES?: string;
     QTY?: string;
+    PREVIOUSQNUMBER?: string;
     IMAGE_URL?: string | null;
 
     // Fields specific to Multi-Component Products
@@ -43,7 +44,7 @@
   import { get } from 'svelte/store';
   import { onMount } from 'svelte';
 
-  let previousQnumber = $state("");
+  
   let productsInCampaign: Product[] = $campaignProducts; // Explicitly type productsInCampaign
   //let Ischecked = $state(false);
   let addAllProductstoKit = $state(false);
@@ -119,7 +120,7 @@
   async function removeProductFromCampaign(productId: string) {
     try {
       await campaignProducts.remove(productId);
-      console.log('Product removed successfully from in-memory store.');
+      console.log('Product removed successfully from in-memory store.', productsInCampaign);
     } catch (error) {
       console.error('Error removing product:', error);
     }
@@ -314,7 +315,7 @@ function addAllCampaignProductsToKit(kit: Kit, event: Event) {
                             </label>
                             <label class="flex flex-col items-center justify-center space-y-4">
                                 <span class="text-gray-700 text-base font-bold">Previous Q#:</span>
-                                <input type="text" name="PREVIOUSQ" bind:value={previousQnumber} class="mb-5 mt-1 block w-200 rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-black text-lg p-2" />
+                                <input type="text" name="PREVIOUSQ" bind:value={product.PREVIOUSQNUMBER} class="mb-5 mt-1 block w-200 rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-black text-lg p-2" />
                             </label>
 
                             <label class="flex flex-col items-center justify-center space-y-4">
@@ -422,7 +423,7 @@ function addAllCampaignProductsToKit(kit: Kit, event: Event) {
       {#each productsInCampaign as product (product._id)}
         <div class="mb-8 p-4 border border-gray-300 rounded-lg text-left bg-gray-50 shadow-sm">
           <h2 class="text-[30px] font-semibold mb-2 text-gray-800">{product.PRODUCT_NAME}</h2>
-          <p class="text-[20px] font-semibold text-gray-700">Previous Q#: {previousQnumber || 'N/A'}</p>
+          <p class="text-[20px] font-semibold text-gray-700">Previous Q#: {product.PREVIOUSQNUMBER || 'N/A'}</p>
           <p class="text-[20px] font-semibold text-gray-700">Description: {product.DESCRIPTION || 'N/A'}</p>
           <p class="text-[20px] font-semibold text-gray-700">Size: {product.SIZE || 'N/A'}</p>
           <p class="text-[20px] font-semibold text-gray-700">Material: {product.MATERIAL || 'N/A'}</p>
@@ -558,7 +559,7 @@ function addAllCampaignProductsToKit(kit: Kit, event: Event) {
                 <td class="border border-gray-300 px-6 py-4 text-sm text-gray-700">{product.FORMS || 'N/A'}</td>
                 <td class="border border-gray-300 px-6 py-4 text-sm text-gray-700">{product.NOTES || 'N/A'}</td>
                 <td class="border border-gray-300 px-6 py-4 text-sm text-gray-700">{getProductTotalQuantity(product._id) || product.QTY || 'N/A'}</td>
-                <td class="border border-gray-300 px-6 py-4 text-sm text-gray-700">{previousQnumber|| 'N/A'}</td>
+                <td class="border border-gray-300 px-6 py-4 text-sm text-gray-700">{product.PREVIOUSQNUMBER|| 'N/A'}</td>
                 <td class="border border-gray-300 px-6 py-4 text-sm text-gray-700">
                   {#if product.COMPONENTS && product.COMPONENTS.length > 0}
                     <ul class="list-disc pl-4">
