@@ -2,6 +2,7 @@
   import { goto } from '$app/navigation';
 
   interface SimpleProduct {
+    id: string; // Unique identifier for reactivity in #each blocks (client-side only)
     PRODUCT_NAME: string;
     DESCRIPTION?: string;
     SIZE?: string;
@@ -25,19 +26,7 @@
     SIDES?: string;
     PRINT_TYPE?: string;
     HARDWARE?: string;
-    ITEM_NUMBER?: string; // Changed from null to undefined as per schema expectation
-    // Add any other component-specific fields
-        IMAGE_URL?: string; // Assuming 'imageUrl' in your template corresponds to IMAGE_URL
-    // Add any other properties your product objects might have
-    imageUrl?: string;
     NOTES?: string;
-  }
-
-  interface MultiComponentProduct {
-    PRODUCT_NAME: string; // Name of the overall multi-component product
-    DESCRIPTION?: string; // Overall description for the multi-component product
-    COMPONENTS: Omit<Component, 'id'>[]; // Array of sub-components, without the 'id' for the backend
-    // Add other overall multi-component product fields as needed
   }
 
   /** @type {{ data: import('./$types.js').PageData, form: import('./$types.js').ActionData }} */
@@ -49,17 +38,25 @@
 
   // State for simple product inputs
   let simpleProductName = $state("");
+  let simpleProductDescription = $state("");
   let simpleProductSize = $state("");
   let simpleProductMaterial = $state("");
   let simpleProductSides = $state("");
   let simpleProductType = $state("");
   let simpleProductHardware = $state("");
-  let simpleProductItemNum = $state("");
   let simpleProductNotes= $state("");
+  
+let overallname = $state("");
+       let overalldescription = $state("");
+    let multicompName = $state("");
+  let multicompDescription = $state("");
+  let multicompSize = $state("");
+  let multicompMaterial = $state("");
+  let multicompSides = $state("");
+  let multicompType = $state("");
+  let multicompHardware = $state("");
+  let multicompNotes= $state("");
 
-  // State for multi-component product inputs
-  let multiProductName = $state("");
-  let multiProductDescription = $state(""); // New field for overall multi-component product description
   let components: Component[] = $state([]); // Array to hold individual component data
 
   // State for message box
@@ -89,10 +86,38 @@
       SIDES: "",
       PRINT_TYPE: "",
       HARDWARE: "",
-      ITEM_NUMBER: "", // Changed from null to undefined
       NOTES: "",
     });
   }
+
+
+    //   let { data, form } = $props();
+    // let inputName = $state("");
+    // let inputSize = $state("");
+    // let inputMaterial = $state("");
+    // let inputSides = $state("");
+    // let inputType = $state("");
+    // let inputHardware = $state("");
+    // let inputItemNum = $state("");
+    // // console.log(data)
+
+    // async function add() {
+    //     await fetch("/api/product", {
+    //         method: "POST",
+    //         body: JSON.stringify({
+    //             PRODUCT_NAME: inputName,
+    //             SIZE: inputSize,
+    //             MATERIAL: inputMaterial,
+    //             SIDES: inputSides,
+    //             PRINT_TYPE: inputType,
+    //             HARDWARE: inputHardware,
+    //             ITEM_NUMBER: inputItemNum,
+    //         }),
+    //         headers: {
+    //             "Content-Type": "application/json",
+    //         },
+    //     });
+    // }
 
   // Function to remove a component form
   function removeComponent(idToRemove: string) {
@@ -108,60 +133,81 @@
       messageText = "";
     }, 3000); // Message disappears after 3 seconds
   }
-
   async function addProduct() {
-    let productData: SimpleProduct | MultiComponentProduct | null = null;
-    let endpoint = "/api/product"; // Assuming a generic product API
+  let endpointproduct = "/api/product"; // Assuming a generic product API
+  let endpointcomponents = "/api/components";
 
-    if (isSimpleProduct) {
-      productData = {
+  if (isSimpleProduct) {
+    console.log("simple product");
+    await fetch(endpointproduct, { // Corrected: Added ',' instead of ')' before the options object
+      method: "POST",
+      headers: { // Important: Add Content-Type header for JSON
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
         PRODUCT_NAME: simpleProductName,
+        DESCRIPTION: simpleProductDescription,
         SIZE: simpleProductSize,
         MATERIAL: simpleProductMaterial,
         SIDES: simpleProductSides,
         PRINT_TYPE: simpleProductType,
         HARDWARE: simpleProductHardware,
-        ITEM_NUMBER: simpleProductItemNum
-      };
-    } else if (isMultiComponentProduct) {
-      productData = {
-        PRODUCT_NAME: multiProductName,
-        DESCRIPTION: multiProductDescription,
-        COMPONENTS: components.map(({ id, ...rest }) => ({ // Use object destructuring to omit 'id'
-            ...rest, // Spread the rest of the properties
-          
-        }))
-      };
-      // You might need a different API endpoint for multi-component products
-      // endpoint = "/api/multi-component-product";
-    }
-
-    if (!productData) {
-      displayMessage("Please select a product type.");
-      return;
-    }
-
-    try {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        body: JSON.stringify(productData),
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (response.ok) {
-        displayMessage("Your Product Has Been Added!");
-        goto("/"); // Navigate after successful addition
-      } else {
-        const errorData = await response.json();
-        displayMessage(`Failed to add product: ${errorData.message || response.statusText}`);
-      }
-    } catch (error: unknown) {
-      console.error("Error adding product:", error);
-      displayMessage("An error occurred while adding the product.");
-    }
+        NOTES: simpleProductNotes,
+      }),
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json(); // Or .text() if your API doesn't return JSON
+    })
+    .then(data => {
+        console.log("Simple product added successfully:", data);
+        // You might want to update UI or state here
+    })
+    .catch(error => {
+        console.error("Error adding simple product:", error);
+        // Handle error, e.g., show an error message to the user
+    });
   }
+
+  if (isMultiComponentProduct) {
+    console.log("multi product");
+    await fetch(endpointcomponents, { // Corrected: Added ',' instead of ')' before the options object
+      method: "POST",
+      headers: { // Important: Add Content-Type header for JSON
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        OVERALLNAME: overallname,
+        OVERALLDESCRIPTION: overalldescription,
+    COMPONENTNAME: multicompName,
+    COMPONENTDESCRIPTION: multicompDescription,
+    SIZE: multicompSize,
+    MATERIAL: multicompMaterial,
+    SIDES: multicompSides,
+    PRINT_TYPE:multicompType,
+    HARDWARE: multicompHardware,
+    NOTES: multicompNotes,
+        })
+  })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json(); // Or .text()
+    })
+    .then(data => {
+        console.log("Multi-component product added successfully:", data);
+        // Update UI or state
+    })
+    .catch(error => {
+        console.error("Error adding multi-component product:", error);
+        // Handle error
+    });
+  }
+}
+
 </script>
 
 <div class="mt-5 p-4 font-inter antialiased bg-[#6495ed] h-auto rounded-lg border-5">
@@ -275,11 +321,11 @@
       <form class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8" on:submit|preventDefault={addProduct}>
         <label class="block md:col-span-2">
           <span class="text-black text-[20px]">OVERALL PRODUCT NAME:</span>
-          <input type="text" autocomplete="off" bind:value={multiProductName} class="form-input-style mt-1 block w-full text-lg p-2" />
+          <input type="text" autocomplete="off" bind:value={overallname} class="form-input-style mt-1 block w-full text-lg p-2" />
         </label>
         <label class="block md:col-span-2">
           <span class="text-black text-[20px]">OVERALL PRODUCT DESCRIPTION:</span>
-          <textarea autocomplete="off" bind:value={multiProductDescription} class="form-input-style mt-1 block w-full text-lg p-2 h-24"></textarea>
+          <textarea autocomplete="off" bind:value={overalldescription} class="form-input-style mt-1 block w-full text-lg p-2 h-24"></textarea>
         </label>
 
         <div class="md:col-span-2 mt-4">

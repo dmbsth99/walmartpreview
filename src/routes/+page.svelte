@@ -16,19 +16,20 @@
     NOTES?: string;
     QTY?: number;
     IMAGE_URL?: string | null;// Add this if you use 'imageUrl' directly from the data, even if it's derived from IMAGE_URL
-
-  COMPONENTS?: { // Matches the structure you send to the backend for components
-      COMPONENT_NAME: string;
-      COMPONENT_DESCRIPTION?: string;
-      SIZE?: string;
-      MATERIAL?: string;
-      SIDES?: string;
-      PRINT_TYPE?: string;
-      HARDWARE?: string;
-      ITEM_NUMBER?: string;
-    }[];
   }
-  
+    interface Component {
+    OVERALLNAME: string;
+    OVERALLDESCRIPTION: string;
+    id: string; // Unique identifier for reactivity in #each blocks (client-side only)
+    COMPONENTNAME: string;
+    COMPONENTDESCRIPTION?: string;
+    SIZE?: string;
+    MATERIAL?: string;
+    SIDES?: string;
+    PRINT_TYPE?: string;
+    HARDWARE?: string;
+    NOTES?: string;
+  }
 
 /** @type {{ data: import('./$types.js').PageData, form: import('./$types.js').ActionData }} */
     let { data, form } = $props();
@@ -43,6 +44,7 @@
 
     let search =$state("");
     let filtered: Product[] = $state(data.products);
+    let filtered2: Component[] = $state(data.components);
     let productCounter = $state(0);
 
     let avatar: string | null = $state(null);
@@ -105,9 +107,10 @@ import { campaignProducts } from '$lib/stores.js'; // Import the shared store
 
   $effect(() => {
     // Ensure data.products is not null/undefined before attempting to filter
-    if (data.products) {
+    if (data.products || data.components) {
       if (!search) {
-        filtered = data.products; // If search is empty, show all products
+        filtered = data.products;
+        filtered2 = data.components // If search is empty, show all products
       } else {
         const lowerCaseSearch = search.toLowerCase();
         filtered = data.products.filter((product: Product) => { // Type 'product' correctly
@@ -120,10 +123,21 @@ import { campaignProducts } from '$lib/stores.js'; // Import the shared store
             // Add more fields as needed
           );
         });
+        filtered2 = data.components.filter((component: Component) => { // Type 'product' correctly
+          // You can customize which fields you want to search through
+          return (
+            component.OVERALLNAME.toLowerCase().includes(lowerCaseSearch) ||
+            (component.OVERALLDESCRIPTION && component.OVERALLDESCRIPTION.toLowerCase().includes(lowerCaseSearch)) ||
+            (component.COMPONENTNAME && component.COMPONENTNAME.toLowerCase().includes(lowerCaseSearch)) ||
+            (component.COMPONENTDESCRIPTION && component.COMPONENTDESCRIPTION .toLowerCase().includes(lowerCaseSearch))
+            // Add more fields as needed
+          );
+        });
       }
     } else {
       // If data.products is not available yet, initialize filtered to an empty array
       filtered = [];
+      filtered2 = [];
     }
   });
 
@@ -151,6 +165,28 @@ import { campaignProducts } from '$lib/stores.js'; // Import the shared store
         }
     }
 
+       async function addComponenttoCampaign(component: any) {
+        // Get the current products in the campaign synchronously
+        const currentCampaignItems = get(campaignProducts);
+
+        // Check if a product with the same original _id is already in the campaign list
+        if (currentCampaignItems.find(p => p._id === component.id)) {
+            console.log("Product already in campaign (client-side check).");
+          showAlert("Product successfully added to campaign!");
+            return;
+        }
+
+        // Add a copy of the product to the in-memory store.
+        // The `add` method in stores.js will generate a new UUID for this entry in the campaign list.
+        await campaignProducts.add(component);
+        console.log("Product added to campaign in-memory store.");
+        showAlert("Product successfully added to campaign!");
+
+        if(currentCampaignItems.length >= 0){
+          productCounter = currentCampaignItems.length + 1;
+        }
+    }
+
 
 
 </script>
@@ -168,6 +204,43 @@ import { campaignProducts } from '$lib/stores.js'; // Import the shared store
 {/if}
 
 <br>
+
+{#each filtered2 as component}
+<div class="CompName inline-block">
+<div class="rounded-lg text-[30px] border-5 border-black h-fit bg-[#adff2f] text-black py-7 m-4 grid-flow-row justify-items-right pointer-events-auto cursor-pointer select-none inline-block w-200" >
+    <h1 class = "Cname">{component.OVERALLNAME}</h1>
+
+    <details>
+      <summary class ="text-[20px]">DETAILS
+      </summary> 
+
+      <div class="p-4 sm:p-6 bg-white border-t border-gray-200 text-[20px]">
+
+        <p class="text-black mb-3 text-base">
+          <strong class="text-gray-800">Overall Description:</strong> {component.OVERALLDESCRIPTION || 'N/A'}
+        </p>
+        <p class="text-black mb-3 text-base">
+          <strong class="text-gray-800">Component Name:</strong> {component.COMPONENTNAME || 'N/A'}
+        </p>
+        <p class="text-black mb-3 text-base">
+          <strong class="text-gray-800">Component Description:</strong> {component.COMPONENTDESCRIPTION|| 'N/A'}
+        </p>
+
+            <hr class = "dashed">
+            <br>
+        <label class = "text-[15px] border-5 p-4 hover:bg-[#6495ed]"> Upload a Photo
+        <input style = "display:none" type="file" on:change={(e) => onFileSelected(e, component.id)} accept="image/*" />
+        </label>
+      </div>
+    </details> <br>
+
+<a class = "campaignbutton rounded-lg" on:click|preventDefault={() => addComponenttoCampaign(component)}>
+    ADD TO CAMPAIGN</a>
+ 
+</div>
+</div>
+
+{/each} 
 
 
 {#each filtered as product (product._id)}
@@ -206,18 +279,6 @@ import { campaignProducts } from '$lib/stores.js'; // Import the shared store
           <strong class="text-gray-800">Item Number:</strong> {product.ITEM_NUMBER || 'N/A'}
         </p>
 
-            {#if product.COMPONENTS && product.COMPONENTS.length > 0}
-              <hr class="dashed my-4">
-              <h3 class="text-xl font-semibold mb-3 text-gray-800">Components:</h3>
-              <ul class="list-disc pl-5">
-                {#each product.COMPONENTS as component, i}
-                  <li class="text-black mb-1 text-base">
-                    <strong>Component {i + 1}:</strong> {component.COMPONENT_NAME || 'N/A'}
-                  </li>
-                {/each}
-              </ul>
-            {/if}
-
             <hr class = "dashed">
             <br>
         <label class = "text-[15px] border-5 p-4 hover:bg-[#6495ed]"> Upload a Photo
@@ -233,6 +294,8 @@ import { campaignProducts } from '$lib/stores.js'; // Import the shared store
 </div>
 
 {/each}
+
+ 
 
 </div>
 

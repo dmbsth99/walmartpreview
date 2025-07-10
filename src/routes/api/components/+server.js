@@ -1,10 +1,10 @@
 import mongoose from "mongoose";
-import { ProductModel } from "../../../db/models/productModel.js";
+import { ComponentModel} from "../../../db/models/productModel.js";
 import { connection } from "../../../db/db.js";
 
 export async function GET() {
     try {
-        const data = await ProductModel.find();
+        const data = await ComponentModel.find();
         return new Response(JSON.stringify(data))
     } catch (err) {
         console.log(err)
@@ -13,21 +13,19 @@ export async function GET() {
 }
 
 export async function POST({ request }) {
-    const { PRODUCT_NAME, SIZE, MATERIAL, SIDES, PRINT_TYPE, HARDWARE, ITEM_NUMBER, VERSIONS, NOTES, FORMS, QTY ,COMPONENTS} = await request.json();
-    console.log(PRODUCT_NAME)
-    const newItem = new ProductModel({
-        "PRODUCT_NAME": PRODUCT_NAME,
-        "SIZE": SIZE,
-        "MATERIAL": MATERIAL,
-        "SIDES": SIDES,
-        "PRINT_TYPE": PRINT_TYPE,
-        "HARDWARE": HARDWARE,
-        "ITEM_NUMBER": ITEM_NUMBER,
-        "VERSIONS": VERSIONS,
-        "NOTES": NOTES,
-        "FORMS": FORMS,
-        "QTY": QTY,
-        "COMPONENTS": COMPONENTS
+    const { OVERALLNAME, OVERALLDESCRIPTION, COMPONENTNAME, COMPONENTDESCRIPTION, SIZE, MATERIAL, SIDES, PRINT_TYPE, HARDWARE, NOTES} = await request.json();
+    console.log(OVERALLNAME)
+    const newItem = new ComponentModel({
+        "OVERALLNAME":OVERALLNAME,
+    "OVERALLDESCRIPTION" :OVERALLDESCRIPTION,
+    "COMPONENTNAME":COMPONENTNAME,
+    "COMPONENTDESCRIPTION":COMPONENTDESCRIPTION,
+    "SIZE":SIZE,
+    "MATERIAL": MATERIAL,
+    "SIDES": SIDES,
+    "PRINT_TYPE": PRINT_TYPE,
+    "HARDWARE": HARDWARE,
+    "NOTES": NOTES,
     })
 
     await newItem.save();
@@ -46,7 +44,7 @@ export async function PATCH({ request }) {
                 status: 400
             });
         }
-        const updatedProduct = await ProductModel.findByIdAndUpdate(
+        const updatedProduct = await ComponentModel.findByIdAndUpdate(
             id,
             { $set: updates },
             { new: true, runValidators: true }
@@ -76,7 +74,7 @@ export async function DELETE({request}) {
     try {
         const {id} = await request.json();
 
-        await ProductModel.findByIdAndDelete(id)
+        await ComponentModel.findByIdAndDelete(id)
         return new Response(JSON.stringify("Deleted"))
         
     } catch (err) {

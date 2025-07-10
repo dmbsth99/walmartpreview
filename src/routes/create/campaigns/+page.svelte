@@ -45,13 +45,21 @@
   import { onMount } from 'svelte';
 
   
+  const props = $props<{ kitVersions?: KitVersion[] }>();
   let productsInCampaign: Product[] = $campaignProducts; // Explicitly type productsInCampaign
   //let Ischecked = $state(false);
   let addAllProductstoKit = $state(false);
-  let kitVersions = $state([
-    // products array should hold ProductInKit type
-    { status: false, text: '', products: [] as ProductInKit[], qty: "" }
+  let kitVersions = $state(props.kitVersions || [
+    { text: '', status: false, products: [] as ProductInKit[], qty: "" }
   ]);
+
+    interface KitVersion {
+    _id: string; // Crucial for the `key` and to pass to functions
+    status: boolean;
+    text: string;
+    products: ProductInKit[]; // An array of ProductInKit
+    qty: string | number; // 'qty' of the kit itself
+  }
 
   let quantitypkit = $state(""); // This seems unused, keeping it as is.
 
@@ -63,17 +71,22 @@
   let options = [
     'VIEW AS ESTIMATING SUMMARY',
     'VIEW AS SPREADSHEET',
-    'VIEW KITTING ONLY'
+    'VIEW KITTING ONLY',
+    'VIEW SRF TEMPLATE'
   ]
+  const qtyPerKitValues = []
 
   function addversions() {
     kitVersions.push({
+      // You'll need to generate an _id here if it's required by your KitVersion interface
+      // For example, using a simple counter or a more robust UUID generator
+      _id: `kit-${kitCounter}`, // Example: generate a simple ID
       text: '',
       status: false,
       products: [],
       qty: ""
     });
-    kitCounter++;
+    kitCounter++; // Increment kitCounter if it's reactive
   }
 
   function toggleSubmit() {
@@ -144,22 +157,7 @@
     return kit.products.some((p: ProductInKit) => p._id === product._id);
   }
 
-  function getProductTotalQuantity(productId: string): number {
-    let totalQuantity = 0;
-    if (!$isKittingToggled) {
-      const product = productsInCampaign.find(p => p._id === productId);
-      return product && product.QTY ? parseInt(product.QTY.toString()) : 0;
-    }
 
-    kitVersions.forEach(kit => {
-      // Find productInKit with the correct type
-      const productInKit = kit.products.find(p => p._id === productId) as ProductInKit | undefined;
-      if (productInKit && kit.qty && productInKit.quantitypkit) { // Now quantitypkit exists on productInKit
-        totalQuantity += parseInt(kit.qty) * parseInt(productInKit.quantitypkit);
-      }
-    });
-    return totalQuantity;
-  }
 
 function addAllCampaignProductsToKit(kit: Kit, event: Event) {
     const target = event.target as HTMLInputElement; // Cast event.target to HTMLInputElement
@@ -179,6 +177,79 @@ function addAllCampaignProductsToKit(kit: Kit, event: Event) {
     }
     // Trigger reactivity
     kitVersions = kitVersions;
+  }
+
+
+function getProductTotalQuantity(productId: string, kitId: string | null = null): number | null {
+    let total = 0;
+    // Assuming productsInCampaign is correctly typed as Product[]
+    const product = productsInCampaign.find(p => p._id === productId);
+    if (product && product.QTY) {
+        total += Number(product.QTY);
+    }
+
+    // Explicitly type 'k' here:
+    (kitId ? kitVersions.filter((k: KitVersion) => k._id === kitId) : kitVersions).forEach((kit: KitVersion) => {
+        kit.products.forEach((productInKit: ProductInKit) => {
+            if (productInKit._id === productId) {
+                total += (Number(productInKit.quantitypkit) || 0) * (Number(kit.qty) || 0);
+            }
+        });
+    });
+    return total > 0 ? total : null;
+}
+
+  function getQtyPerKitDisplay(product_id: string, kitVersionsData: KitVersion[]): string {
+    const quantities = new Set<string>(); // Set of strings
+    kitVersionsData.forEach((kit: KitVersion) => {
+      if (kit.products) {
+        kit.products.forEach((productInKit: ProductInKit) => {
+          if (productInKit._id === product_id) {
+            quantities.add(String(productInKit.quantitypkit || '0')); // Ensure string for Set and join
+          }
+        });
+      }
+    });
+    const result = Array.from(quantities).join(' / ');
+    return result || 'N/A';
+  }
+
+  function getKitSpecificQtyDisplay(product_id: string, kitData: KitVersion): string {
+    const quantities = new Set<string>();
+    if (kitData && kitData.products) {
+      kitData.products.forEach((productInKit: ProductInKit) => {
+        if (productInKit._id === product_id) {
+          quantities.add(String(Number(kitData.qty) || '0')); // Ensure string for Set and join
+        }
+      });
+    }
+    const result = Array.from(quantities).join(' / ');
+    return result || 'N/A';
+  }
+
+  function getTotalQtyDisplay(
+    product_id: string,
+    kitVersionsData: KitVersion[],
+    getProductTotalQuantityFn: (productId: string, kitId?: string | null) => number | null,
+    allProductsInCampaign: Product[]
+  ): string {
+    const quantities = new Set<string>();
+    kitVersionsData.forEach((kit: KitVersion) => {
+      if (kit.products && kit.products.some(p => p._id === product_id)) {
+        const total = getProductTotalQuantityFn(product_id, kit._id);
+        if (total !== null && total !== undefined) {
+          quantities.add(String(total));
+        }
+      }
+    });
+
+    const product = allProductsInCampaign.find(p => p._id === product_id);
+    if (quantities.size === 0 && product && product.QTY) {
+        quantities.add(String(product.QTY));
+    }
+
+    const result = Array.from(quantities).join(' / ');
+    return result || 'N/A';
   }
 </script>
 
@@ -601,6 +672,69 @@ function addAllCampaignProductsToKit(kit: Kit, event: Event) {
   </div>
 {/if}
 
+    {#if selectedView == "VIEW SRF TEMPLATE"}
+  <br>
+  <div class="overflow-x-auto">
+    <table class="w-full table-auto border-collapse border border-gray-400">
+      <thead>
+        <tr class="bg-gray-200">
+          <th class="border border-gray-300 px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">QTY PER KIT</th>
+          <th class="border border-gray-300 px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">ELEMENT</th>
+          <th class="border border-gray-300 px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">IMAGE</th>
+          <th class="border border-gray-300 px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">SIZE</th>
+          <th class="border border-gray-300 px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">SIDES</th>
+          <th class="border border-gray-300 px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">MATERIAL</th>
+
+          {#if $isKittingToggled}
+            {#each kitVersions as kit}
+              {#if kit.products && kit.products.length > 0}
+                <th class="border border-gray-300 px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">**{kit.text || `Kit Version #${kitVersions.indexOf(kit) + 1}`}** KIT</th>
+              {/if}
+            {/each}
+          {/if}
+          <th class="border border-gray-300 px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">KIT COST</th>
+          <th class="border border-gray-300 px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">TOTAL COST</th>
+          <th class="border border-gray-300 px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">NOTES</th>
+          <th class="border border-gray-300 px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">TOTAL QTY</th>
+        </tr>
+      </thead>
+      <tbody>
+{#each productsInCampaign as product (product._id)}
+  <tr class="bg-white hover:bg-gray-50">
+    {#if $isKittingToggled}
+      <td class="border border-gray-300 px-6 py-4 text-sm text-gray-900">
+        {getQtyPerKitDisplay(product._id, kitVersions)}
+      </td>
+    {:else}
+      <td class="border border-gray-300 px-6 py-4 text-sm text-gray-900">N/A</td>
+    {/if}
+    <td class="border border-gray-300 px-6 py-4 text-sm text-gray-900">{product.PRODUCT_NAME}</td>
+    <td class="border border-gray-300 px-6 py-4 text-sm text-gray-900"></td>
+    <td class="border border-gray-300 px-6 py-4 text-sm text-gray-700">{product.SIZE || 'N/A'}</td>
+    <td class="border border-gray-300 px-6 py-4 text-sm text-gray-700">{product.SIDES || 'N/A'}</td>
+    <td class="border border-gray-300 px-6 py-4 text-sm text-gray-700">{product.MATERIAL || 'N/A'}</td>
+
+    {#if $isKittingToggled}
+     {#each kitVersions as kit (kit.text)}
+        <td class="border border-gray-300 px-6 py-4 text-sm text-gray-700">
+          {getKitSpecificQtyDisplay(product._id, kit)}
+        </td>
+      {/each}
+ <td class="border border-gray-300 px-6 py-4 text-sm text-gray-900">$    -</td>
+ <td class="border border-gray-300 px-6 py-4 text-sm text-gray-900">$    -</td>
+ <td class="border border-gray-300 px-6 py-4 text-sm text-gray-900"></td>
+      {#if kitVersions.length > 0} <td class="border border-gray-300 px-6 py-4 text-sm text-gray-700">
+          {getProductTotalQuantity(product._id)}
+        </td>
+      {/if}
+    {/if}
+  </tr>
+{/each}
+      </tbody>
+    </table>
+  </div>
+  <br>
+{/if}
 
 
 
