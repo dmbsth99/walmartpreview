@@ -309,7 +309,7 @@ let overallname = $state("");
        </div>
    </div>
 </label>
-      <button type="submit" class="form-button-base-style form-button-hover-black text-hover-white mt-6 px-6 py-3 font-semibold rounded-md shadow-md transition-colors duration-200">
+      <button type="submit" on:click = {addProduct} class="form-button-base-style form-button-hover-black text-hover-white mt-6 px-6 py-3 font-semibold rounded-md shadow-md transition-colors duration-200">
           SUBMIT NEW PRODUCT
         </button>
     </div>
