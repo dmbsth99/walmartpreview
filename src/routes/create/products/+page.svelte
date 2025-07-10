@@ -1,5 +1,6 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
+  import {showAlert } from '$lib/alertStore.js';
 
   interface SimpleProduct {
     id: string; // Unique identifier for reactivity in #each blocks (client-side only)
@@ -164,6 +165,7 @@ let overallname = $state("");
     .then(data => {
         console.log("Simple product added successfully:", data);
         // You might want to update UI or state here
+         showAlert("Product successfully created!");
     })
     .catch(error => {
         console.error("Error adding simple product:", error);
@@ -200,6 +202,7 @@ let overallname = $state("");
     .then(data => {
         console.log("Multi-component product added successfully:", data);
         // Update UI or state
+        showAlert("Product successfully created!");
     })
     .catch(error => {
         console.error("Error adding multi-component product:", error);
